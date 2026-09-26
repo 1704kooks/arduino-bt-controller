@@ -2,7 +2,7 @@
 <uses-permission android:name="android.permission.BLUETOOTH" />
 <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
 
-<!-- Android 12 ?�상 -->
+<!-- Android 12 ?댁긽 -->
 <uses-permission
     android:name="android.permission.BLUETOOTH_CONNECT"
     android:usesPermissionFlags="neverForLocation" />
