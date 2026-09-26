@@ -41,11 +41,13 @@ class FlutterBluetoothClassic {
   FlutterBluetoothClassic._() {
     // Listen for state changes
     _stateChannel.receiveBroadcastStream().listen((dynamic event) {
-      final Map<String, dynamic> eventMap = event as Map<String, dynamic>;
+      final Map<String, dynamic> eventMap =
+        Map<String, dynamic>.from(event as Map);
 
       // Check if this is a device discovery event
       if (eventMap.containsKey('event') && eventMap['event'] == 'deviceFound') {
-        final deviceMap = eventMap['device'] as Map<String, dynamic>;
+        final deviceMap =
+          Map<String, dynamic>.from(eventMap['device'] as Map);
         _deviceDiscoveryStreamController
             .add(BluetoothDevice.fromMap(deviceMap));
       } else {
