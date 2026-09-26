@@ -2,7 +2,7 @@
 <uses-permission android:name="android.permission.BLUETOOTH" />
 <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
 
-<!-- Android 12 이상 -->
+<!-- Android 12 ?�상 -->
 <uses-permission
     android:name="android.permission.BLUETOOTH_CONNECT"
     android:usesPermissionFlags="neverForLocation" />
@@ -11,7 +11,7 @@
     android:usesPermissionFlags="neverForLocation" />
 
     <application
-        android:label="arduino_bt_controller"
+        android:label="Arduino BT Controller"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

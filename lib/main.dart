@@ -238,7 +238,7 @@ void dispose() {
       backgroundColor: const Color(0xFFF4F6F8),
       appBar: AppBar(
         title: const Text(
-          'Arduino Controller',
+          'Arduino BT Controller',
           style: TextStyle(
             fontWeight: FontWeight.bold,
           ),
@@ -263,7 +263,7 @@ void dispose() {
               const SizedBox(height: 10),
 
               const Text(
-                'Arduino Bluetooth',
+                'Bluetooth Tester by Brian Kim',
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
