@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_classic_serial/flutter_bluetooth_classic.dart';
+import 'dart:async';
 
 void main() {
   runApp(const ArduinoBluetoothApp());
@@ -35,12 +36,69 @@ class BluetoothControllerPage extends StatefulWidget {
 
 class _BluetoothControllerPageState extends State<BluetoothControllerPage> {
   final FlutterBluetoothClassic _bluetooth = FlutterBluetoothClassic();
+  StreamSubscription<BluetoothData>? _dataSubscription;
+
+  String _receiveBuffer = '';
+
+  Timer? _ackTimer;
+  String? _pendingAck;
 
   bool _isConnected = false;
   bool _isConnecting = false;
   bool _ledOn = false;
 
   String _status = 'Not Connected';
+
+  @override
+void initState() {
+  super.initState();
+
+  _dataSubscription = _bluetooth.onDataReceived.listen((data) {
+    final raw = data.asString();
+
+    debugPrint('Bluetooth RAW: [$raw]');
+
+    _receiveBuffer += raw;
+
+    while (_receiveBuffer.contains('\n')) {
+      final index = _receiveBuffer.indexOf('\n');
+
+      final message =
+          _receiveBuffer.substring(0, index).trim();
+
+      _receiveBuffer =
+          _receiveBuffer.substring(index + 1);
+
+      if (!mounted) return;
+
+      if (message == 'ON') {
+  if (_pendingAck == 'ON') {
+    _ackTimer?.cancel();
+    _pendingAck = null;
+  }
+
+  setState(() {
+    _ledOn = true;
+    _status = 'HC-05 Connected';
+  });
+
+  debugPrint('Arduino ACK: ON');
+} else if (message == 'OFF') {
+  if (_pendingAck == 'OFF') {
+    _ackTimer?.cancel();
+    _pendingAck = null;
+  }
+
+  setState(() {
+    _ledOn = false;
+    _status = 'HC-05 Connected';
+  });
+
+  debugPrint('Arduino ACK: OFF');
+}
+    }
+  });
+}
 
   Future<void> connectHC05() async {
     setState(() {
@@ -85,52 +143,94 @@ class _BluetoothControllerPageState extends State<BluetoothControllerPage> {
   }
 
   Future<void> disconnectHC05() async {
-    try {
-      await _bluetooth.disconnect();
-    } finally {
-      if (!mounted) return;
+  _ackTimer?.cancel();
+  _pendingAck = null;
 
-      setState(() {
-        _isConnected = false;
-        _ledOn = false;
-        _status = 'Not Connected';
-      });
-    }
-  }
+  await _bluetooth.disconnect();
+
+  if (!mounted) return;
+
+  setState(() {
+    _isConnected = false;
+    _ledOn = false;
+    _status = 'Not Connected';
+  });
+}
 
   Future<void> turnLedOn() async {
-    if (!_isConnected) return;
+  if (!_isConnected) return;
+
+  try {
+    _pendingAck = 'ON';
+    _ackTimer?.cancel();
 
     await _bluetooth.sendString('1');
 
-    if (!mounted) return;
-
-    setState(() {
-      _ledOn = true;
+    _ackTimer = Timer(const Duration(seconds: 2), () {
+      if (_pendingAck == 'ON') {
+        _pendingAck = null;
+        _handleConnectionLost();
+      }
     });
+  } catch (e) {
+    _ackTimer?.cancel();
+    _pendingAck = null;
+    _handleConnectionLost();
   }
+}
 
-  Future<void> turnLedOff() async {
-    if (!_isConnected) return;
+Future<void> turnLedOff() async {
+  if (!_isConnected) return;
+
+  try {
+    _pendingAck = 'OFF';
+    _ackTimer?.cancel();
 
     await _bluetooth.sendString('0');
 
-    if (!mounted) return;
-
-    setState(() {
-      _ledOn = false;
+    _ackTimer = Timer(const Duration(seconds: 2), () {
+      if (_pendingAck == 'OFF') {
+        _pendingAck = null;
+        _handleConnectionLost();
+      }
     });
+  } catch (e) {
+    _ackTimer?.cancel();
+    _pendingAck = null;
+    _handleConnectionLost();
+  }
+}
+
+void _handleConnectionLost() {
+  if (!mounted) return;
+
+  setState(() {
+    _isConnected = false;
+    _ledOn = false;
+    _status = 'Connection Lost';
+  });
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text(
+        'Bluetooth connection lost. Please reconnect HC-05.',
+      ),
+    ),
+  );
+}
+
+@override
+void dispose() {
+  _ackTimer?.cancel();
+  _dataSubscription?.cancel();
+
+  if (_isConnected) {
+    _bluetooth.disconnect();
   }
 
-  @override
-  void dispose() {
-    if (_isConnected) {
-      _bluetooth.disconnect();
-    }
-
-    _bluetooth.dispose();
-    super.dispose();
-  }
+  _bluetooth.dispose();
+  super.dispose();
+}
 
   @override
   Widget build(BuildContext context) {
